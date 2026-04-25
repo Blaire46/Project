@@ -1,0 +1,53 @@
+# البيئة الافتراضية (كبيرة الحجم)
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# ملفات Python المؤقتة
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# ملفات التطوير
+.env
+.flaskenv
+.vscode/
+.idea/
+
+# ملفات قاعدة البيانات
+*.db
+*.sqlite
+*.sqlite3
+
+# ملفات السجلات
+*.log
+*.pid
+
+# ملفات التوزيع
+dist/
+build/
+*.egg-info/
+*.egg
+
+# ملفات الاختبارات
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ملفات نظام التشغيل
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ملفات المشروع الخاصة
+instance/
+.webassets-cache
+
+# ملفات البيئة
+.env.local
+.env.development
+.env.production
