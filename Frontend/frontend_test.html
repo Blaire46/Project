@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Centre Anti-Cancer - Gestion des dossiers</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: Arial; max-width: 1300px; margin: 20px auto; padding: 0 20px; background: #f0f2f5; }
+        .container { background: white; border-radius: 10px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .service-box, .year-box { display: inline-block; padding: 12px 20px; margin: 8px; background: #007bff; color: white; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+        .service-box:hover, .year-box:hover { background: #0056b3; transform: scale(1.02); }
+        .selected { background: #28a745; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background: #007bff; color: white; }
+        button, input, select { padding: 6px 12px; margin: 4px; border-radius: 5px; border: 1px solid #ccc; }
+        button { background: #007bff; color: white; border: none; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .error { color: red; }
+        .success { color: green; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 20px; border-radius: 10px; width: 500px; max-width: 90%; }
+        .filter-group { margin: 15px 0; display: flex; gap: 10px; flex-wrap: wrap; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🧑‍⚕️ Centre de Lutte Contre le Cancer</h1>
+    <h3>Prototype intégré (MongoDB + Flask + Frontend)</h3>
+</div>
+
+<!-- Login Section -->
+<div class="container" id="loginSection">
+    <h2>Connexion</h2>
+    <input type="email" id="email" placeholder="Email" value="archiviste@example.com"><br>
+    <input type="password" id="password" placeholder="Mot de passe" value="pass123"><br>
+    <button onclick="login()">Se connecter</button>
+    <div id="loginMsg"></div>
+</div>
+
+<!-- Dashboard (hidden until login) -->
+<div id="dashboard" style="display:none;">
+    <div class="container">
+        <h2>📋 Tableau de bord</h2>
+        <p>Bienvenue, <span id="userName"></span> (rôle: <span id="userRole"></span>)</p>
+        <div id="roleSpecificMenu"></div>
+    </div>
+
+    <!-- Archivage sections (visible only when role = archivage) -->
+    <div id="archivageSection" style="display:none;">
+        <div class="container">
+            <h3>🏥 Services disponibles</h3>
+            <div id="servicesBoxes"></div>
+        </div>
+        <div class="container" id="yearsContainer" style="display:none;">
+            <h3>📅 Années d'admission</h3>
+            <div id="yearsBoxes"></div>
+        </div>
+        <div class="container" id="patientsContainer" style="display:none;">
+            <h3>👥 Liste des patients</h3>
+            <div class="filter-group">
+                <input type="text" id="filterWilaya" placeholder="Filtrer par wilaya">
+                <input type="text" id="filterCarteId" placeholder="Filtrer par carte ID">
+                <button onclick="applyFilters()">🔍 Appliquer filtres</button>
+                <button onclick="showAddPatientModal()">➕ Ajouter patient</button>
+            </div>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead><tr><th>ID</th><th>Nom</th><th>Prénom</th><th>Wilaya</th><th>Carte ID</th><th>Service</th><th>Statut</th><th>Actions</th></tr></thead>
+                    <tbody id="patientsTableBody"><tr><td colspan="8">Sélectionnez un service et une année</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Add/Edit Patient -->
+<div id="patientModal" class="modal">
+    <div class="modal-content">
+        <h3 id="modalTitle">Ajouter / Modifier patient</h3>
+        <form id="patientForm">
+            <input type="hidden" id="patientId">
+            <label>Nom: <input type="text" id="modalNom" required></label><br>
+            <label>Prénom: <input type="text" id="modalPrenom" required></label><br>
+            <label>Date naissance: <input type="date" id="modalDateNaissance"></label><br>
+            <label>Wilaya: <input type="text" id="modalWilaya" required></label><br>
+            <label>Numéro carte identité: <input type="text" id="modalCarteId" required></label><br>
+            <label>Téléphone: <input type="text" id="modalTelephone"></label><br>
+            <label>Diagnostic: <input type="text" id="modalDiagnostic"></label><br>
+            <label>Médecin traitant: <input type="text" id="modalMedecin"></label><br>
+            <label>Statut: 
+                <select id="modalStatut">
+                    <option>hospitalisé</option><option>suivi</option><option>sorti</option>
+                </select>
+            </label><br>
+            <label>Service: <input type="text" id="modalService" required></label><br>
+            <label>Date admission: <input type="date" id="modalDateAdmission" required></label><br>
+            <button type="button" onclick="savePatient()">Enregistrer</button>
+            <button type="button" onclick="closeModal()">Annuler</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    const API_BASE = 'http://localhost:5000/api';
+    let authToken = null;
+    let currentRole = null;
+    let currentService = null;
+    let currentYear = null;
+    let allPatients = []; // store full list to filter locally
+
+    async function login() {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const msgDiv = document.getElementById('loginMsg');
+        try {
+            const res = await fetch(`${API_BASE}/login`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({email, password})
+            });
+            const data = await res.json();
+            if (res.ok) {
+                authToken = data.token;
+                currentRole = data.user.role;
+                document.getElementById('userName').innerText = data.user.nom;
+                document.getElementById('userRole').innerText = currentRole;
+                document.getElementById('loginSection').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'block';
+                if (currentRole === 'archivage') {
+                    document.getElementById('archivageSection').style.display = 'block';
+                    loadServices();
+                } else {
+                    document.getElementById('roleSpecificMenu').innerHTML = '<p>📊 Module statistiques en cours de développement...</p>';
+                }
+            } else {
+                msgDiv.innerHTML = `<span class="error">❌ ${data.error}</span>`;
+            }
+        } catch(e) {
+            msgDiv.innerHTML = `<span class="error">❌ Erreur de connexion au backend</span>`;
+        }
+    }
+
+    async function loadServices() {
+        try {
+            const res = await fetch(`${API_BASE}/services/distinct`, {
+                headers: {'Authorization': `Bearer ${authToken}`}
+            });
+            const services = await res.json();
+            const container = document.getElementById('servicesBoxes');
+            container.innerHTML = '';
+            services.forEach(service => {
+                const box = document.createElement('div');
+                box.className = 'service-box';
+                box.innerText = service;
+                box.onclick = () => {
+                    document.querySelectorAll('.service-box').forEach(b => b.classList.remove('selected'));
+                    box.classList.add('selected');
+                    currentService = service;
+                    loadYears(service);
+                };
+                container.appendChild(box);
+            });
+        } catch(e) { console.error(e); }
+    }
+
+    async function loadYears(service) {
+        try {
+            const res = await fetch(`${API_BASE}/years/distinct`, {
+                headers: {'Authorization': `Bearer ${authToken}`}
+            });
+            let years = await res.json();
+            // Optional: filter by service for actual years? For simplicity show all years.
+            const yearsContainer = document.getElementById('yearsContainer');
+            const boxesDiv = document.getElementById('yearsBoxes');
+            boxesDiv.innerHTML = '';
+            years.forEach(year => {
+                const box = document.createElement('div');
+                box.className = 'year-box';
+                box.innerText = year;
+                box.onclick = () => {
+                    document.querySelectorAll('.year-box').forEach(b => b.classList.remove('selected'));
+                    box.classList.add('selected');
+                    currentYear = year;
+                    loadPatients(service, year);
+                };
+                boxesDiv.appendChild(box);
+            });
+            yearsContainer.style.display = 'block';
+        } catch(e) { console.error(e); }
+    }
+
+    async function loadPatients(service, year) {
+        try {
+            const res = await fetch(`${API_BASE}/patients?service=${encodeURIComponent(service)}`, {
+                headers: {'Authorization': `Bearer ${authToken}`}
+            });
+            let patients = await res.json();
+            // Filter by year (extract from date_admission)
+            patients = patients.filter(p => p.date_admission && p.date_admission.startsWith(year));
+            allPatients = patients;
+            renderPatientsTable(patients);
+            document.getElementById('patientsContainer').style.display = 'block';
+        } catch(e) { console.error(e); }
+    }
+
+    function renderPatientsTable(patients) {
+        const tbody = document.getElementById('patientsTableBody');
+        if (!patients.length) {
+            tbody.innerHTML = '<tr><td colspan="8">Aucun patient trouvé</td></tr>';
+            return;
+        }
+        tbody.innerHTML = patients.map(p => `
+            <tr>
+                <td>${p.id}</td><td>${p.nom}</td><td>${p.prenom}</td><td>${p.wilaya}</td>
+                <td>${p.num_carte_identite || ''}</td><td>${p.service}</td><td>${p.statut}</td>
+                <td><button onclick="editPatient('${p.id}')">✏️ Modifier</button></td>
+            </tr>
+        `).join('');
+    }
+
+    function applyFilters() {
+        let filtered = [...allPatients];
+        const wilaya = document.getElementById('filterWilaya').value.trim().toLowerCase();
+        const carteId = document.getElementById('filterCarteId').value.trim();
+        if (wilaya) filtered = filtered.filter(p => p.wilaya.toLowerCase().includes(wilaya));
+        if (carteId) filtered = filtered.filter(p => p.num_carte_identite === carteId);
+        renderPatientsTable(filtered);
+    }
+
+    function showAddPatientModal() {
+        document.getElementById('modalTitle').innerText = 'Ajouter un patient';
+        document.getElementById('patientForm').reset();
+        document.getElementById('patientId').value = '';
+        document.getElementById('modalDateAdmission').value = new Date().toISOString().slice(0,10);
+        document.getElementById('modalService').value = currentService || '';
+        document.getElementById('patientModal').style.display = 'flex';
+    }
+
+    async function editPatient(patientId) {
+        try {
+            const res = await fetch(`${API_BASE}/patients/${patientId}`, {
+                headers: {'Authorization': `Bearer ${authToken}`}
+            });
+            const p = await res.json();
+            document.getElementById('modalTitle').innerText = 'Modifier patient';
+            document.getElementById('patientId').value = p.id;
+            document.getElementById('modalNom').value = p.nom;
+            document.getElementById('modalPrenom').value = p.prenom;
+            document.getElementById('modalDateNaissance').value = p.date_naissance;
+            document.getElementById('modalWilaya').value = p.wilaya;
+            document.getElementById('modalCarteId').value = p.num_carte_identite;
+            document.getElementById('modalTelephone').value = p.telephone;
+            document.getElementById('modalDiagnostic').value = p.diagnostic;
+            document.getElementById('modalMedecin').value = p.medecin_traitant;
+            document.getElementById('modalStatut').value = p.statut;
+            document.getElementById('modalService').value = p.service;
+            document.getElementById('modalDateAdmission').value = p.date_admission;
+            document.getElementById('patientModal').style.display = 'flex';
+        } catch(e) { alert('Erreur chargement patient'); }
+    }
+
+    async function savePatient() {
+        const patientId = document.getElementById('patientId').value;
+        const data = {
+            nom: document.getElementById('modalNom').value,
+            prenom: document.getElementById('modalPrenom').value,
+            date_naissance: document.getElementById('modalDateNaissance').value,
+            wilaya: document.getElementById('modalWilaya').value,
+            num_carte_identite: document.getElementById('modalCarteId').value,
+            telephone: document.getElementById('modalTelephone').value,
+            diagnostic: document.getElementById('modalDiagnostic').value,
+            medecin_traitant: document.getElementById('modalMedecin').value,
+            statut: document.getElementById('modalStatut').value,
+            service: document.getElementById('modalService').value,
+            date_admission: document.getElementById('modalDateAdmission').value
+        };
+        try {
+            let res;
+            if (patientId) {
+                res = await fetch(`${API_BASE}/patients/${patientId}`, {
+                    method: 'PUT',
+                    headers: {'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+            } else {
+                res = await fetch(`${API_BASE}/patients`, {
+                    method: 'POST',
+                    headers: {'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+            }
+            if (res.ok) {
+                closeModal();
+                loadPatients(currentService, currentYear);
+            } else {
+                const err = await res.json();
+                alert('Erreur: ' + (err.error || 'Inconnue'));
+            }
+        } catch(e) { alert('Erreur réseau'); }
+    }
+
+    function closeModal() {
+        document.getElementById('patientModal').style.display = 'none';
+    }
+</script>
+</body>
+</html>
