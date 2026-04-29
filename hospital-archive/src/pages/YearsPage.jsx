@@ -1,3 +1,4 @@
+// YearsPage.jsx (no unused variable)
 import {
   AppBar,
   Toolbar,
@@ -8,59 +9,45 @@ import {
   Button,
   Box,
 } from "@mui/material";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import { services } from "../data/services";
 
 export default function YearsPage() {
   const navigate = useNavigate();
-  const { serviceId } = useParams();
-  const service = services.find(
-  (s) => s.id === parseInt(serviceId)
-);
-
-const serviceName = service?.name || "Service";
-  const years = [2020,2021,2022, 2023, 2024, 2025, 2026];
+  const location = useLocation();
+  
+  // Get service name from navigation state (set by ServicesPage) or from localStorage
+  const serviceName = location.state?.serviceName || localStorage.getItem('selectedServiceName');
+  
+  const years = [2020, 2021, 2022, 2023, 2024, 2025, 2026];
 
   return (
     <Box sx={{ flexGrow: 1, backgroundColor: "#f4f6f8", minHeight: "100vh" }}>
-      
-      {/* 🔵 NAVBAR */}
       <AppBar position="static" sx={{ background: "linear-gradient(135deg, #66bb6a, #43a047)" }}>
         <Toolbar>
           <Typography variant="h6">
-  {serviceName} - Archive
-</Typography>
-
-          <Button color="inherit" onClick={() => navigate("/")}>
+            {serviceName || "Service"} - Archive
+          </Typography>
+          <Button color="inherit" onClick={() => navigate("/services")}>
             <ArrowBackIcon sx={{ mr: 1 }} />
             Back
           </Button>
         </Toolbar>
       </AppBar>
 
-      {/* 🟣 TITLE */}
       <Box sx={{ p: 4 }}>
-        <Typography
-          variant="h4"
-          gutterBottom
-          sx={{
-            fontWeight: "bold",
-            color: "#333",
-            fontFamily: "Poppins, sans-serif",
-          }}
-        >
+        <Typography variant="h4" gutterBottom sx={{ fontWeight: "bold" }}>
           Choisir une année
         </Typography>
 
-        {/* 🟢 YEARS GRID */}
         <Grid container spacing={4}>
           {years.map((year) => (
             <Grid item xs={12} sm={6} md={4} key={year}>
-              
               <Card
-                onClick={() => navigate(`/dossiers/${year}`)}
+                onClick={() => 
+                  navigate(`/dossiers/${year}`, { state: { serviceName } })
+                }
                 sx={{
                   cursor: "pointer",
                   borderRadius: 4,
@@ -76,20 +63,10 @@ const serviceName = service?.name || "Service";
                 }}
               >
                 <CardContent>
-                  
                   <CalendarMonthIcon sx={{ fontSize: 60, mb: 2 }} />
-
-                  <Typography
-                    variant="h5"
-                    sx={{
-                      fontWeight: "bold",
-                      fontFamily: "Poppins, sans-serif",
-                    }}
-                  >
+                  <Typography variant="h5" sx={{ fontWeight: "bold" }}>
                     {year}
                   </Typography>
-
-                  {/* 🔘 BUTTON */}
                   <Button
                     variant="contained"
                     sx={{
@@ -98,17 +75,12 @@ const serviceName = service?.name || "Service";
                       color: "#2e7d32",
                       fontWeight: "bold",
                       borderRadius: "20px",
-                      "&:hover": {
-                        backgroundColor: "#e8f5e9",
-                      },
                     }}
                   >
                     Voir Dossiers
                   </Button>
-
                 </CardContent>
               </Card>
-
             </Grid>
           ))}
         </Grid>

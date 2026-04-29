@@ -23,12 +23,9 @@ def get_all_patients_raw():
     patients = list(db.patients.find())
     return convert_ids(patients)
 def get_distinct_services():
-    """Return list of unique service names from patients collection"""
-    return db.patients.distinct("service")
 
+    return db.patients.distinct("service")
 def get_distinct_years():
-    """Return list of unique years from date_admission field"""
-    # Extract year from date_admission (format YYYY-MM-DD)
     pipeline = [
         {"$group": {"_id": {"$substr": ["$date_admission", 0, 4]}}},
         {"$sort": {"_id": 1}}
