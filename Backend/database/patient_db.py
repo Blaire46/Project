@@ -60,14 +60,22 @@ def get_patients_by_service_raw(service_name):
     patients = list(db.patients.find({"service": service_name}))
     return convert_ids(patients)
 
-def get_statistics_raw(service_name=None):
-    query = {}
+def get_statistics_raw(service_name=None, year=None):
+    match = {}
     if service_name:
-        query["service"] = service_name
-    total = db.patients.count_documents(query)
-    hospitalises = db.patients.count_documents({**query, "statut": "hospitalisé"})
-    suivis = db.patients.count_documents({**query, "statut": "suivi"})
-    sortis = db.patients.count_documents({**query, "statut": "sorti"})
+        match["service"] = service_name
+    if year:
+        # Match patients whose date_admission starts with the year (YYYY-MM-DD)
+        match["date_admission"] = {"$regex": f"^{year}"}
+    
+    total = db.patients.count_documents(match)
+    hospitalises = db.patients.count_documents({**match, "statut": "hospitalisé"})
+    suivis = db.patients.count_documents({**match, "statut": "suivi"})
+    sortis = db.patients.count_documents({**match, "statut": "sorti"})
+    
+    print(f"DEBUG - service: {service_name}, year: {year}")  # Debug log
+    print(f"DEBUG - total: {total}, hospitalises: {hospitalises}, suivis: {suivis}, sortis: {sortis}")
+    
     return {
         "total": total,
         "hospitalises": hospitalises,

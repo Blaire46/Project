@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify
 from app.controllers import patient_controller
 from app.middleware.auth_middleware import token_required
 from database.patient_db import get_distinct_services, get_distinct_years
-
+from flask import request
 patients_bp = Blueprint('patients', __name__)
 
 @patients_bp.route('/patients', methods=['GET'])
@@ -42,3 +42,12 @@ def get_services_distinct():
 def get_years_distinct():
     years = get_distinct_years()
     return jsonify(years)
+ 
+@patients_bp.route('/stats', methods=['GET'])
+@token_required
+def get_stats():
+    from database.patient_db import get_statistics_raw
+    service = request.args.get('service')
+    year = request.args.get('year')
+    stats = get_statistics_raw(service, year)
+    return jsonify(stats)

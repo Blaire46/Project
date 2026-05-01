@@ -14,14 +14,14 @@ import {
 import MedicalServicesIcon from "@mui/icons-material/MedicalServices";
 import LocalHospitalIcon from "@mui/icons-material/LocalHospital";
 import ScienceIcon from "@mui/icons-material/Science";
+import BarChartIcon from "@mui/icons-material/BarChart";
 import { fetchServices } from "../api";
 
-// Optional: map service names to specific icons
 const getIconForService = (serviceName) => {
   if (serviceName.includes("Radio")) return <ScienceIcon />;
   if (serviceName.includes("Oncologie")) return <LocalHospitalIcon />;
   if (serviceName.includes("Pédiatrie")) return <LocalHospitalIcon />;
-  return <MedicalServicesIcon />; // default icon
+  return <MedicalServicesIcon />;
 };
 
 export default function ServicesPage() {
@@ -29,11 +29,11 @@ export default function ServicesPage() {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const userRole = localStorage.getItem('userRole');
 
   useEffect(() => {
     fetchServices()
       .then((data) => {
-        // data is array of service names (strings)
         const serviceList = data.map((name, index) => ({
           id: index + 1,
           name: name,
@@ -43,7 +43,7 @@ export default function ServicesPage() {
         setLoading(false);
       })
       .catch((err) => {
-        console.error("Failed to load services:", err);
+        console.error(err);
         setError(err.message || "Impossible de charger les services");
         setLoading(false);
       });
@@ -71,33 +71,31 @@ export default function ServicesPage() {
 
   return (
     <Box sx={{ flexGrow: 1, backgroundColor: "#f4f6f8", minHeight: "100vh" }}>
-      {/* 🔵 NAVBAR */}
       <AppBar position="static" sx={{ backgroundColor: "#1976d2" }}>
         <Toolbar>
           <LocalHospitalIcon sx={{ mr: 2 }} />
-          <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: "bold", letterSpacing: 1 }}>
+          <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: "bold" }}>
             Hospital Archive System
           </Typography>
-          <Button color="inherit">Home</Button>
-          <Button color="inherit">About</Button>
+          <Button color="inherit" onClick={() => navigate("/services")}>Home</Button>
+          {/* Statistics button - visible for all roles but will redirect */}
+          <Button color="inherit" onClick={() => navigate("/statistiques")} startIcon={<BarChartIcon />}>
+            Statistiques
+          </Button>
         </Toolbar>
       </AppBar>
 
-      {/* 🟣 TITLE */}
       <Box sx={{ p: 4 }}>
-        <Typography variant="h4" gutterBottom sx={{ fontWeight: "bold", color: "#333" }}>
+        <Typography variant="h4" gutterBottom sx={{ fontWeight: "bold" }}>
           Choisir un Service
         </Typography>
 
-        {/* 🟢 SERVICES GRID */}
         <Grid container spacing={4}>
           {services.map((service) => (
             <Grid item xs={12} sm={6} md={4} key={service.id}>
               <Card
                 onClick={() => {
-                  // Save service name to localStorage as fallback
                   localStorage.setItem("selectedServiceName", service.name);
-                  // Navigate with state
                   navigate(`/years/${service.id}`, {
                     state: { serviceName: service.name },
                   });
@@ -129,7 +127,6 @@ export default function ServicesPage() {
                       color: "#1976d2",
                       fontWeight: "bold",
                       borderRadius: "20px",
-                      "&:hover": { backgroundColor: "#e3f2fd" },
                     }}
                   >
                     Accéder

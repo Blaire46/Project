@@ -5,7 +5,7 @@ import YearsPage from "./pages/YearsPage";
 import DossiersPage from "./pages/DossiersPage";
 import DossierDetails from "./pages/DossierDetails";
 import ProtectedRoute from "./components/ProtectedRoute";
-
+import StatisticsPage from "./pages/StatisticsPage";
 function App() {  
   return (
     <BrowserRouter>
@@ -15,6 +15,7 @@ function App() {
         <Route path="/years/:serviceId" element={<ProtectedRoute><YearsPage /></ProtectedRoute>} />
         <Route path="/dossiers/:year" element={<ProtectedRoute><DossiersPage /></ProtectedRoute>} />
         <Route path="/dossier/:id" element={<ProtectedRoute><DossierDetails /></ProtectedRoute>} />
+     <Route path="/statistiques" element={<ProtectedRoute><StatisticsPage /></ProtectedRoute>} />
       </Routes>
     </BrowserRouter>
   );

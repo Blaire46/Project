@@ -23,9 +23,18 @@ export default function Login() {
       const data = await response.json();
 
       if (response.ok) {
+        // Save token and user info
         localStorage.setItem('token', data.token);
         localStorage.setItem('userRole', data.user.role);
-        navigate('/services');
+        localStorage.setItem('userId', data.user.id);
+        localStorage.setItem('userName', data.user.nom);
+        
+        // Redirect based on role
+        if (data.user.role === 'statistiques') {
+          navigate('/statistiques');
+        } else {
+          navigate('/services');
+        }
       } else {
         setError(data.error || 'Login failed');
       }
@@ -42,9 +51,33 @@ export default function Login() {
         <Typography variant="h5" textAlign="center" mb={3}>Hospital Archive System</Typography>
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         <form onSubmit={handleSubmit}>
-          <TextField fullWidth label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} margin="normal" required />
-          <TextField fullWidth label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} margin="normal" required />
-          <Button fullWidth type="submit" variant="contained" disabled={loading} sx={{ mt: 3 }}>{loading ? 'Logging in...' : 'Login'}</Button>
+          <TextField
+            fullWidth
+            label="Email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            margin="normal"
+            required
+          />
+          <TextField
+            fullWidth
+            label="Password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            margin="normal"
+            required
+          />
+          <Button
+            fullWidth
+            type="submit"
+            variant="contained"
+            disabled={loading}
+            sx={{ mt: 3 }}
+          >
+            {loading ? 'Logging in...' : 'Login'}
+          </Button>
         </form>
       </Paper>
     </Box>
